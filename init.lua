@@ -864,7 +864,10 @@ function wm:run()
             io.stderr:write("[f3n2wm] Event error: " .. tostring(err) .. "\n")
         end
 
-        ipc.poll()
+        local ok2, err2 = pcall(ipc.poll)
+        if not ok2 then
+            io.stderr:write("[f3n2wm] IPC error: " .. tostring(err2) .. "\n")
+        end
 
         if self.config_reload_pending then
             self.config_reload_pending = false
@@ -872,7 +875,15 @@ function wm:run()
             if ws then ws:arrange() end
         end
 
-        X11.sync()
+        if X11.display ~= nil then
+            local ok3, err3 = pcall(X11.sync)
+            if not ok3 then
+                io.stderr:write("[f3n2wm] X11 sync error: " .. tostring(err3) .. "\n")
+                self.running = false
+            end
+        else
+            self.running = false
+        end
     end
 end
 
