@@ -5,10 +5,10 @@
 ```bash
 git clone https://github.com/xyragen/f3n2wm.git
 cd f3n2wm
-./setup.sh
+./setup.sh --auto
 ```
 
-Then add `exec f3n2wm` to your `~/.xinitrc` and run `startx`.
+Log out, then run `startx`.
 
 ## Keybindings
 
@@ -42,6 +42,8 @@ Edit `~/.config/f3n2wm/f3n2wm.toml` and press `Mod4+r` to reload.
 
 ## Dependencies
 
+- xorg-server
+- xinit
 - luajit
 - libx11-dev
 - libxinerama-dev

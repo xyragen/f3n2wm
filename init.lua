@@ -827,35 +827,41 @@ function wm:run()
 
         local etype = tonumber(event.type)
 
-        if etype == 2 then
-            self:handle_key_press(event)
-        elseif etype == 3 then
-            self:handle_key_release(event)
-        elseif etype == 4 then
-            self:handle_button_press(event)
-        elseif etype == 5 then
-            self:handle_button_release(event)
-        elseif etype == 6 then
-            self:handle_motion_notify(event)
-        elseif etype == 7 then
-            self:handle_enter_notify(event)
-        elseif etype == 17 then
-            self:handle_destroy_notify(event)
-        elseif etype == 18 then
-            self:handle_unmap_notify(event)
-        elseif etype == 19 then
-        elseif etype == 20 then
-            self:handle_map_request(event)
-        elseif etype == 22 then
-            self:handle_configure_notify(event)
-        elseif etype == 23 then
-            self:handle_configure_request(event)
-        elseif etype == 28 then
-            self:handle_property_notify(event)
-        elseif etype == 33 then
-            self:handle_client_message(event)
-        elseif etype == 34 then
-            self:handle_mapping_notify(event)
+        local ok, err = pcall(function()
+            if etype == 2 then
+                self:handle_key_press(event)
+            elseif etype == 3 then
+                self:handle_key_release(event)
+            elseif etype == 4 then
+                self:handle_button_press(event)
+            elseif etype == 5 then
+                self:handle_button_release(event)
+            elseif etype == 6 then
+                self:handle_motion_notify(event)
+            elseif etype == 7 then
+                self:handle_enter_notify(event)
+            elseif etype == 17 then
+                self:handle_destroy_notify(event)
+            elseif etype == 18 then
+                self:handle_unmap_notify(event)
+            elseif etype == 19 then
+            elseif etype == 20 then
+                self:handle_map_request(event)
+            elseif etype == 22 then
+                self:handle_configure_notify(event)
+            elseif etype == 23 then
+                self:handle_configure_request(event)
+            elseif etype == 28 then
+                self:handle_property_notify(event)
+            elseif etype == 33 then
+                self:handle_client_message(event)
+            elseif etype == 34 then
+                self:handle_mapping_notify(event)
+            end
+        end)
+
+        if not ok then
+            io.stderr:write("[f3n2wm] Event error: " .. tostring(err) .. "\n")
         end
 
         ipc.poll()

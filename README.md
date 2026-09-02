@@ -25,9 +25,9 @@ For automatic setup:
 
 ## After Setup
 
-1. **Log out** of your current session
-2. **Log in** to a TTY (Ctrl+Alt+F2) or use your display manager
-3. **Start f3n2wm**:
+1. Log out of your current session
+2. Log in to a TTY (Ctrl+Alt+F2) or use your display manager
+3. Start f3n2wm:
    ```bash
    startx
    ```
