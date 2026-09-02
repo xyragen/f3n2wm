@@ -1,5 +1,6 @@
 # Compiled Lua sources
 luac.out
+*.luac
 
 # luarocks build files
 *.src.rock
@@ -39,3 +40,11 @@ luac.out
 *.x86_64
 *.hex
 
+# f3n2wm
+f3n2wm-ipc.sock
+*.log
+.cache/
+.cache
+*.tmp
+fix_*.py
+.DS_Store

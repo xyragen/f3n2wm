@@ -1,0 +1,60 @@
+.TH F3N2WM 1 "September 2026" "f3n2wm" "User Commands"
+.SH NAME
+f3n2wm \- A dynamic tiling window manager for Linux
+.SH SYNOPSIS
+.B f3n2wm
+.SH DESCRIPTION
+f3n2wm is a dynamic tiling window manager for Linux, written in LuaJIT with
+direct X11 FFI bindings. It uses TOML for configuration and Lua for
+extensibility.
+.PP
+Windows are automatically arranged as they open, close, or move. The window
+manager supports multiple layouts, workspaces, keyboard-first navigation, and
+a scriptable IPC interface for external control.
+.SH CONFIGURATION
+f3n2wm reads its configuration from TOML files:
+.IP \(bu 3
+/etc/f3n2wm/f3n2wm.toml (system config)
+.IP \(bu 3
+$HOME/.config/f3n2wm/f3n2wm.toml (user config)
+.PP
+User config is merged with system defaults, so only changed values need to be
+specified. Press Mod4+r to reload the configuration without restarting.
+.SH KEYBINDINGS
+The default modifier key is Mod4 (Super/Windows key).
+.PP
+.nf
+Mod4+Return        Open terminal
+Mod4+d             Application launcher
+Mod4+h/j/k/l       Focus left/down/up/right
+Mod4+Space         Cycle layout
+Mod4+1-0           Switch workspace
+Mod4+q             Close window
+Mod4+f             Fullscreen
+Mod4+t             Toggle floating
+Mod4+r             Reload config
+Mod4+F2            Restart f3n2wm
+Mod4+F3            Exit f3n2wm
+.fi
+.SH LAYOUTS
+master-stack, spiral, monocle, grid, tabbed
+.SH IPC
+f3n2wm exposes a Unix socket for IPC at $HOME/.cache/f3n2wm-ipc.sock.
+.SH FILES
+.IP \(bu 3
+$HOME/.config/f3n2wm/f3n2wm.toml
+.IP \(bu 3
+$HOME/.config/f3n2wm/layouts/
+.IP \(bu 3
+/etc/f3n2wm/f3n2wm.toml
+.SH SEE ALSO
+.IP \(bu 3
+README.md
+.IP \(bu 3
+docs/beginner-guide.md
+.IP \(bu 3
+docs/concepts.md
+.SH AUTHOR
+Written by xyragen.
+.SH LICENSE
+MIT License
