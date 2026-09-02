@@ -1053,6 +1053,9 @@ end
 function X11.init()
     X11.load_libs()
     X11.open_display(nil)
+    X11.set_error_handler(function(error_code, request_code)
+        io.stderr:write("[f3n2wm] X11 error: code=" .. tostring(error_code) .. " request=" .. tostring(request_code) .. "\n")
+    end)
     X11.init_atoms()
     X11.setup_wm()
 end
