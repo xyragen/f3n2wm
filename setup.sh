@@ -23,13 +23,13 @@ install_deps() {
     case "$(detect_pkg_manager)" in
         apt)
             sudo apt-get update
-            sudo apt-get install -y xorg xinit luajit libx11-dev libxinerama-dev rofi alacritty
+            sudo apt-get install -y xorg xinit luajit libx11-6 libxinerama1 libx11-dev libxinerama-dev rofi alacritty
             ;;
         pacman)
             sudo pacman -S --noconfirm xorg-server xorg-xinit luajit libx11 libxinerama rofi alacritty
             ;;
         dnf)
-            sudo dnf install -y xorg-x11-server-Xorg xorg-x11-xinit luajit-devel libX11-devel libXinerama-devel rofi alacritty
+            sudo dnf install -y xorg-x11-server-Xorg xorg-x11-xinit luajit libX11 libXinerama luajit-devel libX11-devel libXinerama-devel rofi alacritty
             ;;
         zypper)
             sudo zypper install -y xorg-x11-server xinit luajit-devel libX11-devel libXinerama-devel rofi alacritty
