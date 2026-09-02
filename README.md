@@ -1,3 +1,4 @@
+
 # f3n2wm
 
 A dynamic tiling window manager for Linux, written in LuaJIT with X11 FFI bindings.
@@ -23,10 +24,20 @@ For automatic setup:
 ./setup.sh --auto
 ```
 
-Then add `exec f3n2wm` to `~/.xinitrc` and run `startx`.
+## After Setup
+
+1. **Log out** of your current session
+2. **Log in** to a TTY (Ctrl+Alt+F2) or use your display manager
+3. **Start f3n2wm**:
+   ```bash
+   startx
+   ```
+
+Or if you have a display manager (GDM, SDDM, LightDM), select "xinit" or "f3n2wm" from the session menu.
 
 ## Dependencies
 
+- xinit (provides `startx`)
 - luajit
 - libx11-dev
 - libxinerama-dev

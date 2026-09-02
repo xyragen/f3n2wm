@@ -23,25 +23,25 @@ install_deps() {
     case "$(detect_pkg_manager)" in
         apt)
             sudo apt-get update
-            sudo apt-get install -y luajit libx11-dev libxinerama-dev rofi alacritty
+            sudo apt-get install -y xinit luajit libx11-dev libxinerama-dev rofi alacritty
             ;;
         pacman)
-            sudo pacman -S --noconfirm luajit libx11 libxinerama rofi alacritty
+            sudo pacman -S --noconfirm xorg-xinit luajit libx11 libxinerama rofi alacritty
             ;;
         dnf)
-            sudo dnf install -y luajit-devel libX11-devel libXinerama-devel rofi alacritty
+            sudo dnf install -y xorg-x11-xinit luajit-devel libX11-devel libXinerama-devel rofi alacritty
             ;;
         zypper)
-            sudo zypper install -y luajit-devel libX11-devel libXinerama-devel rofi alacritty
+            sudo zypper install -y xinit luajit-devel libX11-devel libXinerama-devel rofi alacritty
             ;;
         xbps)
-            sudo xbps-install -Sy luajit libX11-devel libXinerama-devel rofi alacritty
+            sudo xbps-install -Sy xinit luajit libX11-devel libXinerama-devel rofi alacritty
             ;;
         apk)
-            sudo apk add luajit-dev libx11-dev libxinerama-dev rofi alacritty
+            sudo apk add xinit luajit-dev libx11-dev libxinerama-dev rofi alacritty
             ;;
         emerge)
-            sudo emerge dev-lang/luajit x11-libs/libX11 x11-libs/libXinerama x11-misc/rofi x11-terms/alacritty
+            sudo emerge x11-apps/xinit dev-lang/luajit x11-libs/libX11 x11-libs/libXinerama x11-misc/rofi x11-terms/alacritty
             ;;
         *)
             echo "Unsupported package manager"
@@ -85,10 +85,10 @@ show_menu() {
     echo "------------"
     echo ""
     echo "Dependencies:"
-    echo "  [1] luajit         $(check_installed luajit && echo "(installed)" || echo "(missing)")"
-    echo "  [2] rofi           $(check_installed rofi && echo "(installed)" || echo "(missing)")"
-    echo "  [3] alacritty      $(check_installed alacritty && echo "(installed)" || echo "(missing)")"
-    echo "  [4] libx11         $(check_installed pkg-config && echo "(installed)" || echo "(missing)")"
+    echo "  [1] xinit         $(check_installed startx && echo "(installed)" || echo "(missing)")"
+    echo "  [2] luajit        $(check_installed luajit && echo "(installed)" || echo "(missing)")"
+    echo "  [3] rofi          $(check_installed rofi && echo "(installed)" || echo "(missing)")"
+    echo "  [4] alacritty     $(check_installed alacritty && echo "(installed)" || echo "(missing)")"
     echo ""
     echo "Configuration:"
     [ -f "$CONFIG_FILE" ] && echo "  [5] config  (exists)" || echo "  [5] config  (missing)"
