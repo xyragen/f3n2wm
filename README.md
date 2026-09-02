@@ -1,4 +1,3 @@
-
 # f3n2wm
 
 A dynamic tiling window manager for Linux, written in LuaJIT with X11 FFI bindings.
@@ -37,6 +36,7 @@ Or if you have a display manager (GDM, SDDM, LightDM), select "xinit" or "f3n2wm
 
 ## Dependencies
 
+- xorg-server (X server)
 - xinit (provides `startx`)
 - luajit
 - libx11-dev
