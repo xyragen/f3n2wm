@@ -83,4 +83,7 @@ deps:
 	fi
 
 setup:
-	@bash setup.sh
+	@bash scripts/setup.sh
+
+check:
+	@python scripts/check_syntax.py

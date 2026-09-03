@@ -3,6 +3,8 @@
 local args = {...}
 local base_path = args[1] or "."
 
+local bit = require("bit")
+
 package.path = base_path .. "/lib/?.lua;" .. base_path .. "/?.lua;" ..
                base_path .. "/layouts/?.lua;" .. package.path
 
@@ -27,7 +29,7 @@ local MOD = {
 
 local wm = {}
 wm.base_path = base_path
-wm.config = config.defaults
+wm.config = config.deep_copy(config.defaults)
 wm.config_path = base_path .. "/f3n2wm.toml"
 wm.x11 = X11
 wm.hooks = hook
@@ -49,8 +51,6 @@ wm.config_reload_pending = false
 wm.keybindings = {}
 
 function wm:set_modmaps(actual_mods)
-    -- Modifier maps are handled by X11.get_modifier_map()
-    -- This is a no-op for compatibility
 end
 
 function wm:parse_keybinding(key_str)
@@ -79,7 +79,7 @@ function wm:parse_keybinding(key_str)
     for _, mod_name in ipairs(mod_names) do
         local mask = MOD[mod_name]
         if mask then
-            mod_mask = mod_mask | mask
+            mod_mask = bit.bor(mod_mask, mask)
         end
     end
     return key_name, mod_mask
@@ -135,7 +135,7 @@ function wm:setup_keybindings()
                     for i = 1, #parts - 1 do
                         local mask = MOD[parts[i]]
                         if mask then
-                            mod_mask = mod_mask | mask
+                            mod_mask = bit.bor(mod_mask, mask)
                         end
                     end
                     X11.grab_button(root, button_num, mod_mask)
@@ -176,6 +176,19 @@ function wm.commands.execute(self, command, event)
         elseif action == "prev" then window.focus_prev()
         elseif action == "next" then window.focus_next()
         elseif action == "urgent" then window.focus_urgent()
+        end
+
+    elseif category == "move" then
+        window.move_focused(action)
+
+    elseif category == "resize" then
+        if ws then
+            if action == "left" or action == "up" then
+                ws.master_ratio = math.max(0.1, ws.master_ratio - 0.05)
+            else
+                ws.master_ratio = math.min(0.9, ws.master_ratio + 0.05)
+            end
+            ws:arrange()
         end
 
     elseif category == "window" then
@@ -232,10 +245,16 @@ function wm.commands.execute(self, command, event)
             if ws2 then ws2:arrange() end end
         elseif action == "incmaster" then
             self.master_count = self.master_count + 1
-            if ws then ws:arrange() end
+            if ws then
+                ws.master_count = self.master_count
+                ws:arrange()
+            end
         elseif action == "decmaster" then
             self.master_count = math.max(1, self.master_count - 1)
-            if ws then ws:arrange() end
+            if ws then
+                ws.master_count = self.master_count
+                ws:arrange()
+            end
         elseif action == "incmargin" then
             self.gap_size = self.gap_size + 2
             if ws then ws:arrange() end
@@ -361,7 +380,7 @@ function wm:handle_map_request(event)
     local win_type = X11.get_window_type(win_id)
     if win_type == "desktop" or win_type == "dock" then
         X11.select_input(win_id, 0x00040000)
-        X11.libs.x11.XMapWindow(X11.display, win_id)
+        X11.map_window(win_id)
         return
     end
 
@@ -419,9 +438,9 @@ function wm:handle_map_request(event)
     local take_focus = X11.intern_atom("WM_TAKE_FOCUS")
     X11.set_wm_protocols(win_id, {wm_delete, take_focus})
 
-    X11.select_input(win_id, 0x00000001 | 0x00000002 | 0x00000004 | 0x00000008 |
-                     0x00000010 | 0x00000020 | 0x00000040 | 0x00040000 |
-                     0x00008000)
+    X11.select_input(win_id, bit.bor(0x00000001, 0x00000002, 0x00000004,
+        0x00000008, 0x00000010, 0x00000020, 0x00000040,
+        0x00040000, 0x00008000))
 
     local current_ws = self.workspaces:get_current()
     if current_ws then
@@ -447,10 +466,11 @@ function wm:handle_map_request(event)
         w.mapped = true
         w.visible = true
 
+        local ws = self.workspaces:get_current()
+
         if self.config.focus_follows_mouse then
             self:focus_window(win_id)
         else
-            local ws = self.workspaces:get_current()
             if ws then ws:focus_window(win_id) end
         end
 
@@ -474,11 +494,11 @@ function wm:handle_unmap_notify(event)
     if not window.is_registered(win_id) then return end
 
     local w = window.get(win_id)
-    if w then
-        w.mapped = false
-        w.visible = false
-        w.focused = false
-    end
+    if not w then return end
+
+    w.mapped = false
+    w.visible = false
+    w.focused = false
 
     local ws = w.workspace
     if ws then
@@ -495,6 +515,11 @@ function wm:handle_destroy_notify(event)
     if not window.is_registered(win_id) then return end
 
     local w = window.get(win_id)
+    if not w then
+        window.unregister(win_id)
+        return
+    end
+
     local ws = w.workspace
     window.unregister(win_id)
 
@@ -512,10 +537,10 @@ function wm:handle_configure_request(event)
 
     local w = window.get(win_id)
     if w and (w.floating or w.fullscreen) then
-        local x = tonumber(event.xconfigurerequest.x)
-        local y = tonumber(event.xconfigurerequest.y)
-        local width = tonumber(event.xconfigurerequest.width)
-        local height = tonumber(event.xconfigurerequest.height)
+        local x = tonumber(event.xconfigurerequest.x) or w.x or 0
+        local y = tonumber(event.xconfigurerequest.y) or w.y or 0
+        local width = tonumber(event.xconfigurerequest.width) or w.width or 1
+        local height = tonumber(event.xconfigurerequest.height) or w.height or 1
         if width > 0 and height > 0 then
             X11.move_resize_window(win_id, x, y, width, height)
         end
@@ -541,7 +566,7 @@ function wm:handle_key_press(event)
             local kc, ms = k:match("(%d+):(%d+)")
             if tonumber(kc) == keycode then
                 local stored_mod = tonumber(ms)
-                if (state & stored_mod) == stored_mod then
+                if bit.band(state, stored_mod) == stored_mod then
                     command = v
                     break
                 end
@@ -576,7 +601,7 @@ function wm:handle_button_press(event)
                 local btn, ms = k:match("btn:(%d+):(%d+)")
                 if tonumber(btn) == button then
                     local stored_mod = tonumber(ms)
-                    if (state & stored_mod) == stored_mod then
+                    if bit.band(state, stored_mod) == stored_mod then
                         action = v
                         break
                     end
@@ -753,7 +778,6 @@ end
 
 function wm:load_user_config()
     local user_config_path = os.getenv("HOME") .. "/.config/f3n2wm/f3n2wm.toml"
-    local user_config
     local ok, result = pcall(toml.load, user_config_path)
     if ok and result then
         local merged = config.merge_tables(config.defaults, result)
@@ -767,7 +791,7 @@ function wm:startup()
     hook.set_context(self)
     self.config = config.load(self.config_path)
     if not self.config then
-        self.config = config.defaults
+        self.config = config.deep_copy(config.defaults)
         self.config._path = self.config_path
     end
 
@@ -776,7 +800,7 @@ function wm:startup()
         self.config = config.merge_tables(self.config, user_config)
     end
 
-    X11.init()
+    X11.init(self.config.workspaces.count)
 
     window.set_wm(self)
     workspace_mod.set_wm(self)
@@ -798,6 +822,9 @@ function wm:startup()
 
     self.workspaces = workspace_mod.WorkspaceManager:new(self)
     self.workspaces:init()
+
+    self.ipc.set_wm(self)
+    self.ipc.init(self.config, self.base_path)
 
     self:setup_keybindings()
 
@@ -861,12 +888,12 @@ function wm:run()
         end)
 
         if not ok then
-            io.stderr:write("[f3n2wm] Event error: " .. tostring(err) .. "\n")
+            print("EVENT ERROR: " .. tostring(err))
         end
 
         local ok2, err2 = pcall(ipc.poll)
         if not ok2 then
-            io.stderr:write("[f3n2wm] IPC error: " .. tostring(err2) .. "\n")
+            print("IPC ERROR: " .. tostring(err2))
         end
 
         if self.config_reload_pending then

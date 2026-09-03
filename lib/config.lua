@@ -1,3 +1,4 @@
+local bit = require("bit")
 local toml = require("toml")
 
 local config = {}
@@ -52,7 +53,7 @@ config.defaults = {
     keybindings = {
         ["Mod4_Return"] = "spawn:alacritty",
         ["Mod4_d"] = "spawn:rofi -show drun",
-        ["Mod4_p"] = "spawn:browser",
+        ["Mod4_p"] = "spawn:firefox",
         ["Mod4_space"] = "layout:next",
         ["Mod4_h"] = "focus:left",
         ["Mod4_l"] = "focus:right",
@@ -79,7 +80,7 @@ config.defaults = {
         ["Mod4_7"] = "workspace:7",
         ["Mod4_8"] = "workspace:8",
         ["Mod4_9"] = "workspace:9",
-        ["Mod4_10"] = "workspace:10",
+        ["Mod4_0"] = "workspace:10",
         ["Mod4_Shift_1"] = "window:move_to_workspace:1",
         ["Mod4_Shift_2"] = "window:move_to_workspace:2",
         ["Mod4_Shift_3"] = "window:move_to_workspace:3",
@@ -131,7 +132,6 @@ config.defaults = {
         ["Mod4_Button2"] = "resize",
         ["Mod4_Button3"] = "resize",
         ["Mod4_Shift_Button1"] = "move_to_workspace",
-        ["Mod4_Shift_Button2"] = "resize_to_workspace",
     },
 
     colors = {
@@ -161,10 +161,10 @@ config.defaults = {
 
     exec = {
         "feh --bg-scale ~/wallpaper.jpg",
-        "xfce4-power-manager &",
-        "nm-applet &",
-        "pasystray &",
-        "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &",
+        "xfce4-power-manager",
+        "nm-applet",
+        "pasystray",
+        "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1",
     },
 
     layout_options = {
@@ -214,6 +214,17 @@ config.defaults = {
         init_xinput = true,
     },
 
+    workspace_behavior = {
+        scroll_workspaces = true,
+        scroll_factor = 1,
+        scroll_animate = true,
+        scroll_animation_time = 250,
+        wrap_workspaces = false,
+        infinite_workspaces = true,
+        workspace_scroll_snap = true,
+        output_scroll = true,
+    },
+
     debugging = {
         log_level = "info",
         log_file = "~/.cache/f3n2wm.log",
@@ -236,28 +247,22 @@ config.defaults = {
 }
 
 config.key_names = {
-    ["Mod1"] = 0x0020,
-    ["Mod2"] = 0x0040,
-    ["Mod3"] = 0x0080,
-    ["Mod4"] = 0x0100,
-    ["Mod5"] = 0x0200,
+    ["Mod1"] = 0x0008,
+    ["Mod2"] = 0x0010,
+    ["Mod3"] = 0x0020,
+    ["Mod4"] = 0x0040,
+    ["Mod5"] = 0x0080,
     ["Shift"] = 0x0001,
     ["Lock"] = 0x0002,
     ["Control"] = 0x0004,
-    ["Alt"] = 0x0020,
+    ["Alt"] = 0x0008,
     ["Ctrl"] = 0x0004,
-    ["Super"] = 0x0100,
-    ["Hyper"] = 0x0080,
-}
-
-config.mouse_buttons = {
-    ["Button1"] = 1,
-    ["Button2"] = 2,
-    ["Button3"] = 3,
-    ["Button4"] = 4,
-    ["Button5"] = 5,
-    ["Button6"] = 6,
-    ["Button7"] = 7,
+    ["Super"] = 0x0040,
+    ["Hyper"] = 0x0020,
+    ["M"] = 0x0040,
+    ["S"] = 0x0001,
+    ["C"] = 0x0004,
+    ["A"] = 0x0008,
 }
 
 config.keysyms = {
@@ -279,6 +284,7 @@ config.keysyms = {
     F1 = 0xffbe, F2 = 0xffbf, F3 = 0xffc0, F4 = 0xffc1,
     F5 = 0xffc2, F6 = 0xffc3, F7 = 0xffc4, F8 = 0xffc5,
     F9 = 0xffc6, F10 = 0xffc7, F11 = 0xffc8, F12 = 0xffc9,
+    equal = 0x003d, minus = 0x002d, period = 0x002e, comma = 0x002c,
 }
 
 function config.deep_copy(t)
@@ -330,17 +336,10 @@ function config.get_modifier_mask(modkey)
         parts[#parts+1] = part
     end
 
-    if #parts >= 1 then
-        local mod = parts[1]
-        if config.key_names[mod] then
-            result = result | config.key_names[mod]
-        end
-    end
-
-    for i = 2, #parts do
+    for i = 1, #parts do
         local mod = parts[i]
         if config.key_names[mod] then
-            result = result | config.key_names[mod]
+            result = bit.bor(result, config.key_names[mod])
         end
     end
 
@@ -349,12 +348,12 @@ end
 
 function config.parse_keybinding(keybinding)
     local parts = {}
-    for part in keybinding:gmatch("[^%+]+") do
+    for part in keybinding:gmatch("[^_]+") do
         parts[#parts+1] = part
     end
 
-    local modifiers = {}
     local key = parts[#parts]
+    local modifiers = {}
     for i = 1, #parts - 1 do
         modifiers[#modifiers+1] = parts[i]
     end
@@ -362,7 +361,7 @@ function config.parse_keybinding(keybinding)
     local mod_mask = 0
     for _, mod in ipairs(modifiers) do
         if config.key_names[mod] then
-            mod_mask = mod_mask | config.key_names[mod]
+            mod_mask = bit.bor(mod_mask, config.key_names[mod])
         end
     end
 
@@ -382,12 +381,12 @@ end
 
 function config.parse_mousebind(mousebind)
     local parts = {}
-    for part in mousebind:gmatch("[^%+]+") do
+    for part in mousebind:gmatch("[^_]+") do
         parts[#parts+1] = part
     end
 
-    local modifiers = {}
     local button_str = parts[#parts]
+    local modifiers = {}
     for i = 1, #parts - 1 do
         modifiers[#modifiers+1] = parts[i]
     end
@@ -395,11 +394,11 @@ function config.parse_mousebind(mousebind)
     local mod_mask = 0
     for _, mod in ipairs(modifiers) do
         if config.key_names[mod] then
-            mod_mask = mod_mask | config.key_names[mod]
+            mod_mask = bit.bor(mod_mask, config.key_names[mod])
         end
     end
 
-    local button_num = config.mouse_buttons[button_str]
+    local button_num = tonumber(button_str:match("Button(%d+)"))
 
     return {
         modifiers = mod_mask,
@@ -416,14 +415,21 @@ function config.parse_rule(rule)
     end
     if type(rule) == "string" then
         local parts = {}
-        for part in rule:gmatch("([^%;]+)") do
+        for part in rule:gmatch("([^;]+)") do
             parts[#parts+1] = part
         end
         local result = {}
         for _, part in ipairs(parts) do
             local key, value = part:match("^%s*(%w+)%s*:%s*(.-)%s*$")
             if key and value then
-                result[key] = value
+                if value == "true" then
+                    result[key] = true
+                elseif value == "false" then
+                    result[key] = false
+                else
+                    local num = tonumber(value)
+                    result[key] = num or value
+                end
             end
         end
         return result
@@ -443,11 +449,13 @@ function config.get_command_target(action)
     end
 
     if #parts >= 2 then
+        local params = {}
+        for i = 3, #parts do params[i-2] = parts[i] end
         return {
             category = parts[1],
             command = parts[2],
-            params = {},
-        }, parts[1], parts[2], select(3, unpack(parts))
+            params = params,
+        }
     end
 
     return nil

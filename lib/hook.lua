@@ -43,11 +43,7 @@ function hook.fire(event_name, ...)
     for _, entry in ipairs(hook.hooks[event_name]) do
         local ok, result = pcall(entry.callback, ctx, ...)
         if not ok then
-            if ctx.log then
-                ctx.log.error("Hook '" .. event_name .. "' failed: " .. tostring(result))
-            else
-                io.stderr:write("[f3n2wm] Hook '" .. event_name .. "' failed: " .. tostring(result) .. "\n")
-            end
+            print("HOOK ERROR: event=" .. tostring(event_name) .. " error=" .. tostring(result))
         elseif result == "cancel" or result == false then
             should_cancel = true
             cancel_return = result
@@ -71,11 +67,7 @@ function hook.fire_with_data(event_name, data, ...)
     for _, entry in ipairs(hook.hooks[event_name]) do
         local ok, result = pcall(entry.callback, ctx, data, ...)
         if not ok then
-            if ctx.log then
-                ctx.log.error("Hook '" .. event_name .. "' failed: " .. tostring(result))
-            else
-                io.stderr:write("[f3n2wm] Hook '" .. event_name .. "' failed: " .. tostring(result) .. "\n")
-            end
+            print("HOOK ERROR: event=" .. tostring(event_name) .. " error=" .. tostring(result))
         elseif result == "cancel" or result == false then
             should_cancel = true
             cancel_return = result

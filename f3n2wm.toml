@@ -24,17 +24,7 @@ float_snap_width = 100
 float_snap_height = 100
 float_snap_border = 20
 
-[layouts]
-default = "master-stack"
-names = ["master-stack", "spiral", "monocle", "grid", "tabbed"]
-
-[workspaces]
-count = 10
-names = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
-scroll_layouts = true
-scroll_fallback = false
-
-[bindings]
+[keybindings]
 "Mod4_Return" = "spawn:alacritty"
 "Mod4_d" = "spawn:rofi -show drun"
 "Mod4_p" = "spawn:firefox"
@@ -65,7 +55,7 @@ scroll_fallback = false
 "Mod4_7" = "workspace:7"
 "Mod4_8" = "workspace:8"
 "Mod4_9" = "workspace:9"
-"Mod4_10" = "workspace:10"
+"Mod4_0" = "workspace:10"
 "Mod4_Shift_1" = "window:move_to_workspace:1"
 "Mod4_Shift_2" = "window:move_to_workspace:2"
 "Mod4_Shift_3" = "window:move_to_workspace:3"
@@ -89,11 +79,6 @@ scroll_fallback = false
 "Mod4_minus" = "layout:decmaster"
 "Mod4_period" = "layout:incmargin"
 "Mod4_comma" = "layout:decmargin"
-"Mod4_a" = "workspace:toggle"
-"Mod4_x" = "window:maximize:horizontal"
-"Mod4_y" = "window:maximize:vertical"
-"Mod4_z" = "window:minimize"
-"Mod4_u" = "focus:urgent"
 "Mod4_b" = "bar:toggle"
 "Mod4_v" = "bar:reload"
 "Mod4_F1" = "reload"
@@ -129,13 +114,35 @@ border_warning = "#e69138"
 main = "monospace:size=10"
 fallback = "noto-fonts:size=10"
 
-[rules]
-{ match = "Firefox", float = false, workspace = 2 }
-{ match = "Gimp", float = true, workspace = 3 }
-{ match = "Steam", float = false, workspace = 4 }
-{ match = "Alacritty", float = false, workspace = 1 }
-{ match = "Spotify", float = false, workspace = 10 }
-{ match = "discord", float = false, workspace = 10 }
+[[rules]]
+match = "Firefox"
+float = false
+workspace = 2
+
+[[rules]]
+match = "Gimp"
+float = true
+workspace = 3
+
+[[rules]]
+match = "Steam"
+float = false
+workspace = 4
+
+[[rules]]
+match = "Alacritty"
+float = false
+workspace = 1
+
+[[rules]]
+match = "Spotify"
+float = false
+workspace = 10
+
+[[rules]]
+match = "discord"
+float = false
+workspace = 10
 
 [layout_options]
 master_count = 1
@@ -174,6 +181,14 @@ output_scroll = true
 enabled = true
 socket_path = "/tmp/f3n2wm-ipc.sock"
 
+exec = [
+    "feh --bg-scale ~/wallpaper.jpg &",
+    "xfce4-power-manager &",
+    "nm-applet &",
+    "pasystray &",
+    "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &"
+]
+
 [startup]
 spawn_cursor = true
 spawn_cursor_name = "left_ptr"
@@ -183,15 +198,6 @@ set_root_pixmap = false
 load_fonts = true
 init_xkb = true
 init_xinput = true
-
-[exec]
-startup = [
-    "feh --bg-scale ~/wallpaper.jpg &",
-    "xfce4-power-manager &",
-    "nm-applet &",
-    "pasystray &",
-    "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1 &"
-]
 
 [debugging]
 log_level = "info"

@@ -1,6 +1,10 @@
 local ffi = require("ffi")
+local bit = require("bit")
 
 ffi.cdef[[
+typedef int Bool;
+typedef int Status;
+typedef struct _XDisplay Display;
 typedef long KeySym;
 typedef unsigned long Window;
 typedef unsigned long Atom;
@@ -345,8 +349,8 @@ int XSetWindowBackground(Display *display, Window w, unsigned long pixel);
 int XSelectInput(Display *display, Window w, long event_mask);
 KeySym XKeysymToKeycode(Display *display, KeySym keysym);
 int XUngrabKey(Display *display, KeySym keysym, unsigned int modifiers, Window w);
-int XGrabKey(Display *display, int keycode, unsigned int modifiers, Window w, Window focus, int pointer_mode, int keyboard_mode);
-int XGrabButton(Display *display, unsigned int button, unsigned int modifiers, Window w, int owner_events, unsigned int event_mask, unsigned int pointer_mode, unsigned int keyboard_mode);
+int XGrabKey(Display *display, int keycode, unsigned int modifiers, Window w, int owner_events, int pointer_mode, int keyboard_mode);
+int XGrabButton(Display *display, unsigned int button, unsigned int modifiers, Window w, int owner_events, unsigned int event_mask, int pointer_mode, int keyboard_mode, Window confine_to, Cursor cursor);
 int XUngrabButton(Display *display, unsigned int button, unsigned int modifiers, Window w);
 int XSendEvent(Display *display, Window w, int propagate, unsigned long event_mask, XEvent *event_send);
 Colormap XDefaultColormap(Display *display, int screen);
@@ -386,6 +390,13 @@ int XSetWMName(Display *display, Window w, XTextProperty *text_prop);
 Window XGetSelectionOwner(Display *display, Atom selection);
 int XSetSelectionOwner(Display *display, Atom selection, Window owner, Time time);
 int XRefreshKeyboardMapping(void *event);
+int XSetErrorHandler(int (*handler)(Display *, XErrorEvent *));
+int XDisplayKeycodes(Display *display, int *min_keycodes_return, int *max_keycodes_return);
+]]
+
+ffi.cdef[[
+Bool XineramaQueryScreens(Display *display, int *number_return);
+Bool XineramaIsActive(Display *display);
 ]]
 
 local X11 = {
@@ -458,13 +469,13 @@ function X11.get_atom_name(atom)
     return name
 end
 
-function X11.change_property(window, atom, type, format, data, nelements)
+function X11.change_property(window, atom, atom_type, format, data, nelements)
     if type(data) == "cdata" then
-        X11.libs.x11.XChangeProperty(X11.display, window, atom, type, format, 1, data, nelements)
+        X11.libs.x11.XChangeProperty(X11.display, window, atom, atom_type, format, 1, data, nelements)
     else
         local buf = ffi.new("unsigned char[?]", #data)
         ffi.copy(buf, data, #data)
-        X11.libs.x11.XChangeProperty(X11.display, window, atom, type, format, 1, buf, nelements)
+        X11.libs.x11.XChangeProperty(X11.display, window, atom, atom_type, format, 1, buf, nelements)
     end
 end
 
@@ -546,7 +557,7 @@ function X11.move_resize_window(window, x, y, width, height)
     changes.x = x; changes.y = y
     changes.width = width; changes.height = height
     changes.border_width = 0
-    local mask = 0x0001 | 0x0002 | 0x0004 | 0x0008
+    local mask = bit.bor(0x0001, 0x0002, 0x0004, 0x0008)
     X11.libs.x11.XConfigureWindow(X11.display, window, mask, changes)
 end
 
@@ -588,7 +599,7 @@ end
 
 function X11.grab_button(window, button, modifiers)
     X11.libs.x11.XGrabButton(X11.display, button, modifiers, window, 0,
-        0x0001 | 0x0002 | 0x0004 | 0x0008, 0x0001 | 0x0002 | 0x0004, 0, 0)
+        bit.bor(0x0001, 0x0002, 0x0004, 0x0008), 0, 0, 0, 0)
 end
 
 function X11.set_input_focus(window)
@@ -653,6 +664,32 @@ function X11.alloc_color(hex)
         return tonumber(color.pixel)
     end
     return tonumber(color.pixel)
+end
+
+function X11.get_window_name(window)
+    local text_prop = ffi.new("XTextProperty")
+    local result = X11.libs.x11.XGetWMName(X11.display, window, text_prop)
+    if result == 0 then return nil end
+    local name = ffi.string(text_prop.value)
+    return name
+end
+
+function X11.get_wm_pid(window)
+    local prop = X11.get_property(window, X11.intern_atom("_NET_WM_PID"),
+        X11.intern_atom("CARDINAL"), 4)
+    if not prop or prop.format ~= 32 then return nil end
+    local val = ffi.cast("uint32_t*", prop.data)[0]
+    X11.libs.x11.XFree(prop.data)
+    return tonumber(val)
+end
+
+function X11.get_transient_for(window)
+    local prop = X11.get_property(window, X11.intern_atom("WM_TRANSIENT_FOR"),
+        X11.intern_atom("WINDOW"), 1)
+    if not prop or prop.format ~= 32 then return nil end
+    local val = ffi.cast("uint32_t*", prop.data)[0]
+    X11.libs.x11.XFree(prop.data)
+    return tonumber(val)
 end
 
 function X11.add_wm_state(window, state_atom)
@@ -861,10 +898,10 @@ function X11.xinerama_is_active()
 end
 
 function X11.select_substructure_redirect(root)
-    X11.libs.x11.XSelectInput(X11.display, root,
-        0x00100000 | 0x00200000 | 0x00040000 |
-        0x00000001 | 0x00000002 | 0x00000004 | 0x00000008 |
-        0x00000010 | 0x00000020 | 0x00000040 | 0x00020000)
+    local mask = bit.bor(0x00100000, 0x00200000, 0x00040000,
+        0x00000001, 0x00000002, 0x00000004, 0x00000008,
+        0x00000010, 0x00000020, 0x00000040, 0x00020000)
+    X11.libs.x11.XSelectInput(X11.display, root, mask)
 end
 
 function X11.get_pointer_position()
@@ -885,7 +922,7 @@ end
 
 function X11.grab_pointer(window)
     return X11.libs.x11.XGrabPointer(X11.display, window, 0,
-        0x0001 | 0x0002 | 0x0004 | 0x0008, 0x0001 | 0x0002 | 0x0004 | 0x0008, 0, 0)
+        bit.bor(0x0001, 0x0002, 0x0004, 0x0008), 0, 0, 0, 0, 0)
 end
 
 function X11.ungrab_pointer(time)
@@ -984,20 +1021,20 @@ function X11.init_atoms()
     end
 end
 
-function X11.setup_wm()
+function X11.setup_wm(desktop_count)
     local width, height = X11.get_screen_size()
     local root = X11.root
 
     X11.store_name(root, "f3n2wm")
 
     local wm_check = ffi.new("uint32_t[1]", root)
-    X11.change_property(root, X11.intern_atom("WM_CHECK"),
+    X11.change_property(root, X11.intern_atom("_NET_SUPPORTING_WM_CHECK"),
         X11.intern_atom("WINDOW"), 32, wm_check, 1)
 
-    local wm_name = ffi.new("char[?]", 5)
-    ffi.copy(wm_name, "WMWM")
-    X11.change_property(root, X11.intern_atom("WM_CHECK"),
-        X11.intern_atom("STRING"), 8, wm_name, 4)
+    local wm_name = ffi.new("char[?]", 7)
+    ffi.copy(wm_name, "f3n2wm")
+    X11.change_property(root, X11.intern_atom("_NET_SUPPORTING_WM_CHECK"),
+        X11.intern_atom("STRING"), 8, wm_name, 6)
 
     local pid_val = 0
     local ok, err = pcall(function()
@@ -1032,8 +1069,8 @@ function X11.setup_wm()
     local bg = X11.alloc_color("#000000")
     X11.libs.x11.XSetWindowBackground(X11.display, root, bg)
 
-    local dc = ffi.new("uint32_t[1]", 1)
-    X11.change_property(root, X11.intern_atom("_NET_NUMBER_OF_DESKTOP"),
+    local dc = ffi.new("uint32_t[1]", desktop_count or 10)
+    X11.change_property(root, X11.intern_atom("_NET_NUMBER_OF_DESKTOPS"),
         X11.intern_atom("CARDINAL"), 32, dc, 1)
 
     local cd = ffi.new("uint32_t[1]", 0)
@@ -1050,14 +1087,14 @@ function X11.setup_wm()
     return { width = width, height = height }
 end
 
-function X11.init()
+function X11.init(desktop_count)
     X11.load_libs()
     X11.open_display(nil)
     X11.set_error_handler(function(error_code, request_code)
-        io.stderr:write("[f3n2wm] X11 error: code=" .. tostring(error_code) .. " request=" .. tostring(request_code) .. "\n")
+        print("X11 ERROR: error_code=" .. tostring(error_code) .. " request_code=" .. tostring(request_code))
     end)
     X11.init_atoms()
-    X11.setup_wm()
+    X11.setup_wm(desktop_count)
 end
 
 return X11

@@ -15,14 +15,18 @@ function masterstack.arrange(windows, rect, config)
 
     if usable_w < 100 or usable_h < 100 then return end
 
-    local master_count = #windows
     local master_wins = 1
-    if config and config.master_count then
-        master_wins = config.master_count
+    if config then
+        local lo = config.layout_options
+        master_wins = (lo and lo.master_count) or config.master_count or 1
     end
     master_wins = math.min(master_wins, #windows)
 
-    local split = usable_w / 2
+    local ratio = config.master_ratio or 0.5
+    if ratio < 0.1 then ratio = 0.1 end
+    if ratio > 0.9 then ratio = 0.9 end
+
+    local split = math.floor(usable_w * ratio)
     local master_w = split
     local stack_w = usable_w - master_w
     local master_h = usable_h / master_wins

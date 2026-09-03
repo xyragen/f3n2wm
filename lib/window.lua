@@ -100,7 +100,6 @@ function window.Window:set_border(width, color_hex, focused)
     if not wm or not self.has_border then return end
     local X11 = wm.x11
     local pixel = X11.alloc_color(color_hex)
-    if pixel == 0 then pixel = 0 end
     X11.set_window_border_width(self.id, wm.config.border_width)
     X11.set_window_border(self.id, pixel)
     self.border_pixel = pixel
@@ -114,22 +113,21 @@ function window.Window:focus()
 
     self.focused = true
     X11.set_input_focus(self.id)
-    X11.add_wm_state(self.id, X11.intern_atom("_NET_WM_STATE_DEMANDS_ATTENTION"))
 
-    if wm then
-        wm:update_active_window(self.id)
-    end
+    wm:update_active_window(self.id)
 
     local focus_color = wm.config.colors.border_focus
     if not focus_color then focus_color = wm.config.border_focus end
     self:set_border(wm.config.border_width, focus_color, true)
 
-    local ws = wm.workspaces:get_current()
-    if ws then
-        ws:raise_window(self.id)
+    if wm.workspaces then
+        local ws = wm.workspaces:get_current()
+        if ws then
+            ws:raise_window(self.id)
+        end
     end
 
-    wm.hooks.fire("window_focus", self, ws)
+    wm.hooks.fire("window_focus", self, self.workspace)
 end
 
 function window.Window:unfocus()
@@ -207,25 +205,34 @@ function window.Window:toggle_floating()
             self.float_height = self.height
         end
     end
-    local ws = window.wm.workspaces:get_current()
-    if ws then ws:arrange() end
+    local wm = window.wm
+    if wm and wm.workspaces then
+        local ws = wm.workspaces:get_current()
+        if ws then ws:arrange() end
+    end
 end
 
 function window.Window:toggle_maximize()
     self.maximized = not self.maximized
-    local ws = window.wm.workspaces:get_current()
-    if ws then ws:arrange() end
+    local wm = window.wm
+    if wm and wm.workspaces then
+        local ws = wm.workspaces:get_current()
+        if ws then ws:arrange() end
+    end
 end
 
 function window.Window:toggle_fullscreen()
     self.fullscreen = not self.fullscreen
-    local ws = window.wm.workspaces:get_current()
-    if ws then ws:arrange() end
+    local wm = window.wm
+    if wm and wm.workspaces then
+        local ws = wm.workspaces:get_current()
+        if ws then ws:arrange() end
+    end
 end
 
 function window.Window:move_to_workspace(ws_num)
     local wm = window.wm
-    if not wm then return end
+    if not wm or not wm.workspaces then return end
     local target_ws = wm.workspaces:get_by_index(ws_num)
     if not target_ws then return end
 
@@ -275,8 +282,11 @@ function window.Window:maximize(orientation)
     else
         self.maximized = true
     end
-    local ws = window.wm.workspaces:get_current()
-    if ws then ws:arrange() end
+    local wm = window.wm
+    if wm and wm.workspaces then
+        local ws = wm.workspaces:get_current()
+        if ws then ws:arrange() end
+    end
 end
 
 function window.Window:unmaximize(orientation)
@@ -287,14 +297,11 @@ function window.Window:unmaximize(orientation)
     else
         self.maximized = false
     end
-    local ws = window.wm.workspaces:get_current()
-    if ws then ws:arrange() end
-end
-
-function window.Window:fullscreen()
-    self.fullscreen = not self.fullscreen
-    local ws = window.wm.workspaces:get_current()
-    if ws then ws:arrange() end
+    local wm = window.wm
+    if wm and wm.workspaces then
+        local ws = wm.workspaces:get_current()
+        if ws then ws:arrange() end
+    end
 end
 
 function window.Window:minimize()
@@ -455,6 +462,7 @@ function window.get_fullscreen()
 end
 
 function window.get_focused()
+    if not window.wm or not window.wm.workspaces then return nil end
     local ws = window.wm.workspaces:get_current()
     if not ws then return nil end
     if ws.focused then
@@ -474,31 +482,37 @@ function window.get_urgent()
 end
 
 function window.focus_next()
+    if not window.wm or not window.wm.workspaces then return end
     local ws = window.wm.workspaces:get_current()
     if ws then ws:focus_next() end
 end
 
 function window.focus_prev()
+    if not window.wm or not window.wm.workspaces then return end
     local ws = window.wm.workspaces:get_current()
     if ws then ws:focus_prev() end
 end
 
 function window.focus_direction(dir)
+    if not window.wm or not window.wm.workspaces then return end
     local ws = window.wm.workspaces:get_current()
     if ws then ws:focus_direction(dir) end
 end
 
 function window.move_focused(direction)
+    if not window.wm or not window.wm.workspaces then return end
     local ws = window.wm.workspaces:get_current()
     if ws then ws:move_focused(direction) end
 end
 
 function window.close_focused()
+    if not window.wm or not window.wm.workspaces then return end
     local ws = window.wm.workspaces:get_current()
     if ws then ws:close_focused() end
 end
 
 function window.kill_focused()
+    if not window.wm or not window.wm.workspaces then return end
     local ws = window.wm.workspaces:get_current()
     if ws then
         local w = ws:get_focused()
@@ -507,16 +521,19 @@ function window.kill_focused()
 end
 
 function window.next_layout()
+    if not window.wm or not window.wm.workspaces then return end
     local ws = window.wm.workspaces:get_current()
     if ws then ws:next_layout() end
 end
 
 function window.prev_layout()
+    if not window.wm or not window.wm.workspaces then return end
     local ws = window.wm.workspaces:get_current()
     if ws then ws:prev_layout() end
 end
 
 function window.toggle_floating_focused()
+    if not window.wm or not window.wm.workspaces then return end
     local ws = window.wm.workspaces:get_current()
     if ws then
         local w = ws:get_focused()
@@ -525,6 +542,7 @@ function window.toggle_floating_focused()
 end
 
 function window.maximize_focused()
+    if not window.wm or not window.wm.workspaces then return end
     local ws = window.wm.workspaces:get_current()
     if ws then
         local w = ws:get_focused()
@@ -533,36 +551,54 @@ function window.maximize_focused()
 end
 
 function window.fullscreen_focused()
+    if not window.wm or not window.wm.workspaces then return end
     local ws = window.wm.workspaces:get_current()
     if ws then
         local w = ws:get_focused()
-        if w then w:fullscreen() end
+        if w then w:toggle_fullscreen() end
     end
 end
 
 function window.swap_master()
+    if not window.wm or not window.wm.workspaces then return end
     local ws = window.wm.workspaces:get_current()
     if ws then ws:swap_master() end
 end
 
 function window.inc_master()
-    if window.wm then window.wm:layout_increment(1) end
+    local wm = window.wm
+    if not wm then return end
+    wm.master_count = wm.master_count + 1
+    local ws = wm.workspaces and wm.workspaces:get_current()
+    if ws then ws:arrange() end
 end
 
 function window.dec_master()
-    if window.wm then window.wm:layout_increment(-1) end
+    local wm = window.wm
+    if not wm then return end
+    wm.master_count = math.max(1, wm.master_count - 1)
+    local ws = wm.workspaces and wm.workspaces:get_current()
+    if ws then ws:arrange() end
 end
 
 function window.inc_margin()
-    if window.wm then window.wm:layout_increment_margin(1) end
+    local wm = window.wm
+    if not wm then return end
+    wm.gap_size = wm.gap_size + 2
+    local ws = wm.workspaces and wm.workspaces:get_current()
+    if ws then ws:arrange() end
 end
 
 function window.dec_margin()
-    if window.wm then window.wm:layout_decrement_margin(1) end
+    local wm = window.wm
+    if not wm then return end
+    wm.gap_size = math.max(0, wm.gap_size - 2)
+    local ws = wm.workspaces and wm.workspaces:get_current()
+    if ws then ws:arrange() end
 end
 
 function window.reload()
-    if window.wm then window.wm:reload() end
+    if window.wm then window.wm:reload_config() end
 end
 
 function window.restart()
@@ -576,22 +612,38 @@ end
 function window.focus_urgent()
     local urgent = window.get_urgent()
     if #urgent > 0 then
-        local ws = window.wm.workspaces:get_current()
-        if ws then ws:focus_window(urgent[1].id) end
+        if window.wm and window.wm.workspaces then
+            local ws = window.wm.workspaces:get_current()
+            if ws then ws:focus_window(urgent[1].id) end
+        end
     end
 end
 
 function window.go_back()
-    local ws = window.wm.workspaces
-    if ws then ws:go_back() end
+    if window.wm and window.wm.workspaces then
+        window.wm.workspaces:go_back()
+    end
 end
 
 function window.toggle_split()
-    if window.wm then window.wm:layout_toggle_split() end
+    local wm = window.wm
+    if not wm then return end
+    wm.layout_split_vertical = not wm.layout_split_vertical
+    local ws = wm.workspaces and wm.workspaces:get_current()
+    if ws then ws:arrange() end
 end
 
 function window.layout_info()
-    if window.wm then window.wm:layout_info() end
+    local wm = window.wm
+    if not wm or not wm.workspaces then return end
+    local ws = wm.workspaces:get_current()
+    if ws then
+        local names = wm.layouts.list_layout_names()
+        local idx = ws.layout_index
+        print("Layout: " .. (names[idx] or "unknown") ..
+              " | Windows: " .. #ws.windows ..
+              " | Master: " .. ws.master_count)
+    end
 end
 
 return window

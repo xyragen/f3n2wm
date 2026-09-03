@@ -1,8 +1,13 @@
 local layout = {}
+
 layout.layouts = {}
+layout.order = {}
 layout.default = "master-stack"
 
 function layout.register(name, mod)
+    if not layout.layouts[name] then
+        layout.order[#layout.order + 1] = name
+    end
     layout.layouts[name] = mod
 end
 
@@ -12,10 +17,9 @@ end
 
 function layout.list_layout_names()
     local names = {}
-    for name in pairs(layout.layouts) do
+    for _, name in ipairs(layout.order) do
         names[#names+1] = name
     end
-    table.sort(names)
     return names
 end
 
@@ -34,7 +38,7 @@ function layout.load_builtin(base_path)
         if ok and mod and mod.arrange then
             layout.register(name, mod)
         else
-            local ok2, mod2 = pcall(require, "layouts." .. name:gsub("-", ""))
+            local ok2, mod2 = pcall(require, name)
             if ok2 and mod2 and mod2.arrange then
                 layout.register(name, mod2)
             end
@@ -53,14 +57,22 @@ function layout.load_user_layouts(base_path, config)
     end
 end
 
-function layout.get_master_count(ws)
-    if not ws then return 1 end
-    return ws.master_count or 1
+function layout.get_master_count(ws, config)
+    if ws and ws.master_count then return ws.master_count end
+    if config and config.layout_options and config.layout_options.master_count then
+        return config.layout_options.master_count
+    end
+    if config and config.master_count then return config.master_count end
+    return 1
 end
 
 function layout.get_master_ratio(ws, config)
     if ws and ws.master_ratio then return ws.master_ratio end
-    return config and config.master_ratio or 0.5
+    if config and config.layout_options and config.layout_options.master_ratio then
+        return config.layout_options.master_ratio
+    end
+    if config and config.master_ratio then return config.master_ratio end
+    return 0.5
 end
 
 function layout.split_rect(rect, n, vertical)
