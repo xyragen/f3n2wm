@@ -5,7 +5,7 @@
 ```bash
 git clone https://github.com/xyragen/f3n2wm.git
 cd f3n2wm
-./setup.sh --auto
+./scripts/setup.sh --auto
 ```
 
 Log out, then run `startx`.

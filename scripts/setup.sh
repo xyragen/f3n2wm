@@ -3,6 +3,8 @@
 
 set -e
 
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
 CONFIG_DIR="$HOME/.config/f3n2wm"
 CONFIG_FILE="$CONFIG_DIR/f3n2wm.toml"
 
@@ -52,17 +54,17 @@ install_deps() {
 
 setup_config() {
     mkdir -p "$CONFIG_DIR/layouts"
-    [ ! -f "$CONFIG_FILE" ] && cp f3n2wm.toml "$CONFIG_FILE"
-    for f in layouts/*.lua; do
+    [ ! -f "$CONFIG_FILE" ] && cp "$ROOT/f3n2wm.toml" "$CONFIG_FILE"
+    for f in "$ROOT"/layouts/*.lua; do
         [ ! -f "$CONFIG_DIR/layouts/$(basename "$f")" ] && cp "$f" "$CONFIG_DIR/layouts/$(basename "$f")"
     done
 }
 
 install_wm() {
-    sudo cp init.lua /usr/local/bin/f3n2wm
+    sudo cp "$ROOT/init.lua" /usr/local/bin/f3n2wm
     sudo chmod +x /usr/local/bin/f3n2wm
     sudo mkdir -p /usr/local/share/man/man1
-    sudo cp f3n2wm.1 /usr/local/share/man/man1/ 2>/dev/null || true
+    sudo cp "$ROOT/f3n2wm.1" /usr/local/share/man/man1/ 2>/dev/null || true
 }
 
 setup_xinitrc() {
@@ -123,6 +125,6 @@ tui_mode() {
 
 case "$1" in
     --auto|-a) full_setup ;;
-    --help|-h) echo "Usage: ./setup.sh [--auto]"; exit 0 ;;
+    --help|-h) echo "Usage: ./scripts/setup.sh [--auto]"; exit 0 ;;
     *) tui_mode ;;
 esac

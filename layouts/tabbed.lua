@@ -30,22 +30,6 @@ function tabbed.arrange(windows, rect, config)
         )
         w.tab_index = i
     end
-
-    local ws = nil
-    if windows[1] then
-        local win = windows[1]
-        if win.workspace then ws = win.workspace end
-    end
-
-    if ws and windows[#windows] then
-        local focused = windows[#windows]
-        for i = 1, #windows do
-            if windows[i].focused then
-                focused = windows[i]
-                break
-            end
-        end
-    end
 end
 
 return tabbed

@@ -15,12 +15,12 @@ A dynamic tiling window manager for Linux, written in LuaJIT with X11 FFI bindin
 ```bash
 git clone https://github.com/xyragen/f3n2wm.git
 cd f3n2wm
-./setup.sh
+./scripts/setup.sh
 ```
 
 For automatic setup:
 ```bash
-./setup.sh --auto
+./scripts/setup.sh --auto
 ```
 
 ## After Setup

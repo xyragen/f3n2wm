@@ -1,11 +1,38 @@
+local bit = require("bit")
+local ffi = require("ffi")
+
+ffi.cdef[[
+struct sockaddr_un {
+    unsigned short sun_family;
+    char sun_path[108];
+};
+
+int socket(int domain, int type, int protocol);
+int bind(int fd, const void *addr, unsigned int addrlen);
+int listen(int fd, int backlog);
+int accept(int fd, void *addr, unsigned int *addrlen);
+int connect(int fd, const void *addr, unsigned int addrlen);
+int recv(int fd, void *buf, unsigned int len, int flags);
+int send(int fd, const void *buf, unsigned int len, int flags);
+int close(int fd);
+int unlink(const char *pathname);
+int fcntl(int fd, int cmd, ...);
+]]
+
 local ipc = {}
 
 ipc.wm = nil
 ipc.socket_path = nil
-ipc.socket = nil
+ipc.server_fd = nil
 ipc.handlers = {}
 ipc.running = false
-ipc.buffer = ""
+
+local AF_UNIX = 1
+local SOCK_STREAM = 1
+local F_GETFL = 3
+local F_SETFL = 4
+local O_NONBLOCK = 0x800
+local MSG_DONTWAIT = 0x40
 
 function ipc.set_wm(wm)
     ipc.wm = wm
@@ -13,30 +40,6 @@ end
 
 function ipc.register_command(name, handler)
     ipc.handlers[name] = handler
-end
-
-function ipc.init(config, base_path)
-    local socket_name = config.ipc.socket_name or "f3n2wm-ipc"
-    local run_dir = os.getenv("XDG_RUNTIME_DIR") or "/tmp"
-    ipc.socket_path = run_dir .. "/" .. socket_name
-
-    ipc:register_default_commands()
-
-    if config.ipc.enabled == false then
-        return
-    end
-
-    local socket = nil
-    local ok, err = pcall(function()
-        socket = io.popen("rm -f '" .. ipc.socket_path .. "' 2>/dev/null; echo done")
-        if socket then socket:close() end
-    end)
-    if not ok then
-        ipc.socket_path = "/tmp/" .. socket_name
-    end
-
-    ipc.running = true
-    return true
 end
 
 function ipc.register_default_commands()
@@ -231,11 +234,7 @@ function ipc.register_default_commands()
             commands[#commands+1] = name
         end
         table.sort(commands)
-        local result = {}
-        for _, name in ipairs(commands) do
-            result[#result+1] = name
-        end
-        return "Commands: " .. table.concat(result, ", ")
+        return "Commands: " .. table.concat(commands, ", ")
     end)
 end
 
@@ -259,7 +258,7 @@ function ipc.execute_command(line)
     if not ok then
         return "error: " .. tostring(result)
     end
-    return result
+    return tostring(result or "")
 end
 
 function ipc.handle_connection(data)
@@ -277,55 +276,113 @@ function ipc.handle_connection(data)
     return table.concat(results, "\n") .. "\n"
 end
 
-function ipc.poll()
-    if not ipc.running then return end
-    local cmd = "ls -la '" .. ipc.socket_path .. "' 2>/dev/null | grep -c socket"
-    local handle = io.popen(cmd)
-    if handle then
-        local result = handle:read("*number")
-        handle:close()
-        if result and result > 0 then
-            local read_cmd = "echo '' | socat - UNIX-CONNECT:" .. ipc.socket_path .. " 2>/dev/null"
-            local read_handle = io.popen(read_cmd)
-            if read_handle then
-                local data = read_handle:read("*all")
-                read_handle:close()
-                if data and #data > 0 then
-                    local response = ipc.handle_connection(data)
-                    local write_cmd = "echo -n '" .. response:gsub("'", "'\\''") .. "' | socat - UNIX-CONNECT:" .. ipc.socket_path .. " 2>/dev/null"
-                    os.execute(write_cmd)
-                end
-            end
-        end
+function ipc.init(config, base_path)
+    local cfg = (config and config.ipc) or {}
+    ipc.socket_path = cfg.socket_path or "/tmp/f3n2wm-ipc.sock"
+
+    ipc.register_default_commands()
+
+    if cfg.enabled == false then
+        return false
     end
+
+    local ok, err = pcall(function()
+        ffi.C.unlink(ipc.socket_path)
+        local fd = ffi.C.socket(AF_UNIX, SOCK_STREAM, 0)
+        if fd < 0 then error("socket() failed") end
+        local addr = ffi.new("struct sockaddr_un")
+        addr.sun_family = AF_UNIX
+        ffi.copy(addr.sun_path, ipc.socket_path)
+        if ffi.C.bind(fd, ffi.cast("const void*", addr), ffi.sizeof(addr)) < 0 then
+            ffi.C.close(fd)
+            error("bind() failed on " .. ipc.socket_path)
+        end
+        if ffi.C.listen(fd, 8) < 0 then
+            ffi.C.close(fd)
+            error("listen() failed")
+        end
+        local flags = tonumber(ffi.C.fcntl(fd, F_GETFL, 0)) or 0
+        ffi.C.fcntl(fd, F_SETFL, bit.bor(flags, O_NONBLOCK))
+        ipc.server_fd = fd
+    end)
+
+    if not ok then
+        ipc.server_fd = nil
+        ipc.running = false
+        return false, tostring(err)
+    end
+
+    ipc.running = true
+    return true
+end
+
+function ipc.poll()
+    if not ipc.running or not ipc.server_fd then return end
+
+    local client_fd = ffi.C.accept(ipc.server_fd, nil, nil)
+    if client_fd < 0 then return end
+
+    local buf = ffi.new("char[4096]")
+    local data = {}
+    while true do
+        local n = ffi.C.recv(client_fd, buf, 4096, MSG_DONTWAIT)
+        if n <= 0 then break end
+        data[#data+1] = ffi.string(buf, n)
+        if n < 4096 then break end
+    end
+
+    local request = table.concat(data)
+    if #request > 0 then
+        local response = ipc.handle_connection(request)
+        ffi.C.send(client_fd, response, #response, 0)
+    end
+
+    ffi.C.close(client_fd)
 end
 
 function ipc.send_command(command)
-    local socket_path = ipc.socket_path or "/tmp/f3n2wm-ipc"
-    local cmd = "echo '" .. command .. "' | socat - UNIX-CONNECT:" .. socket_path .. " 2>/dev/null"
-    local handle = io.popen(cmd)
-    if handle then
-        local response = handle:read("*all")
-        handle:close()
-        return response
-    end
-    return nil
+    if not ipc.socket_path then return nil end
+
+    local ok, result = pcall(function()
+        local fd = ffi.C.socket(AF_UNIX, SOCK_STREAM, 0)
+        if fd < 0 then error("socket() failed") end
+        local addr = ffi.new("struct sockaddr_un")
+        addr.sun_family = AF_UNIX
+        ffi.copy(addr.sun_path, ipc.socket_path)
+        if ffi.C.connect(fd, ffi.cast("const void*", addr), ffi.sizeof(addr)) < 0 then
+            ffi.C.close(fd)
+            error("connect() failed on " .. ipc.socket_path)
+        end
+        ffi.C.send(fd, command .. "\n", #command + 1, 0)
+        local buf = ffi.new("char[4096]")
+        local chunks = {}
+        while true do
+            local n = ffi.C.recv(fd, buf, 4096, MSG_DONTWAIT)
+            if n <= 0 then break end
+            chunks[#chunks+1] = ffi.string(buf, n)
+        end
+        ffi.C.close(fd)
+        return table.concat(chunks)
+    end)
+
+    if ok then return result end
+    return nil, result
 end
 
 function ipc.shutdown()
     ipc.running = false
-    ipc.handlers = {}
-    ipc.buffer = ""
-    local ok, err = pcall(function()
-        os.remove(ipc.socket_path)
-    end)
-end
-
-function ipc.init_unix_socket()
-    if ipc.socket_path then
-        os.execute("rm -f '" .. ipc.socket_path .. "' 2>/dev/null")
+    if ipc.server_fd then
+        pcall(function()
+            ffi.C.close(ipc.server_fd)
+        end)
+        ipc.server_fd = nil
     end
-    return true
+    if ipc.socket_path then
+        pcall(function()
+            ffi.C.unlink(ipc.socket_path)
+        end)
+    end
+    ipc.handlers = {}
 end
 
 return ipc

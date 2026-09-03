@@ -140,6 +140,7 @@ local parse_basic_str_multiline = function(str, i)
                 chars[#chars+1] = '\\'
                 i = i + 2
             elseif next_c == 'n' then
+                chars[#chars+1] = '\n'
                 i = i + 2
             elseif next_c == 'r' then
                 chars[#chars+1] = '\r'
@@ -296,7 +297,7 @@ local parse_value = function(str, i)
         if num == 'true' then return true, j
         elseif num == 'false' then return false, j
         elseif num == 'inf' or num == '+inf' then return math.huge, j
-        elseif num == '-inf' or num == '+inf' then return -math.huge, j
+        elseif num == '-inf' then return -math.huge, j
         elseif num == 'nan' or num == '+nan' then return 0/0, j
         elseif num == '-nan' then return 0/0, j
         end
@@ -360,37 +361,58 @@ local parse_key = function(str, i)
     end
 end
 
+local skip_ws = function(str, i)
+    local len = #str
+    while i <= len do
+        local c = str:sub(i, i)
+        if c ~= ' ' and c ~= '\t' and c ~= '\n' and c ~= '\r' then
+            break
+        end
+        i = i + 1
+    end
+    return i
+end
+
+local parse_inline_table
+
 local parse_array = function(str, i)
     local result = {}
     local len = #str
-    i = spaces(str, i + 1)
+    i = skip_ws(str, i + 1)
     if str:sub(i, i) == ']' then
         return result, i + 1
     end
     while i <= len do
-        i = spaces(str, i)
+        i = skip_ws(str, i)
         if str:sub(i, i) == '#' then
             i = find_line_end(str, i) + 1
-            i = spaces(str, i)
+            i = skip_ws(str, i)
         end
         local c = str:sub(i, i)
         if c == ']' then
             return result, i + 1
         end
-        local val, next_pos = parse_value(str, i)
-        if val == nil then
+        if c == '{' then
+            local sub, next_i = parse_inline_table(str, i)
+            result[#result+1] = sub
+            i = next_i
+        elseif c == '[' then
             local sub, next_i = parse_array(str, i)
             result[#result+1] = sub
             i = next_i
         else
+            local val, next_pos = parse_value(str, i)
+            if val == nil then
+                error("Invalid array value at position " .. i)
+            end
             result[#result+1] = val
             i = next_pos
         end
-        i = spaces(str, i)
+        i = skip_ws(str, i)
         c = str:sub(i, i)
         if c == '#' then
             i = find_line_end(str, i) + 1
-            i = spaces(str, i)
+            i = skip_ws(str, i)
             c = str:sub(i, i)
         end
         if c == ',' then
@@ -402,7 +424,7 @@ local parse_array = function(str, i)
     return result, i
 end
 
-local parse_inline_table = function(str, i)
+parse_inline_table = function(str, i)
     local result = {}
     local len = #str
     i = i + 1
@@ -524,6 +546,23 @@ function parser.parse(str)
                     error("Expected ]] at position " .. i)
                 end
                 i = i + 1
+                local parent = result
+                for j = 1, #key - 1 do
+                    local k = key[j]
+                    if type(k) == "number" then k = tostring(k) end
+                    if parent[k] == nil then
+                        parent[k] = {}
+                    end
+                    parent = parent[k]
+                end
+                local last_key = key[#key]
+                if type(last_key) == "number" then last_key = tostring(last_key) end
+                if type(parent[last_key]) ~= "table" then
+                    parent[last_key] = {}
+                end
+                local entry = {}
+                table.insert(parent[last_key], entry)
+                current_table = entry
             else
                 local key, next_pos = parse_dotted_key(str, i + 1)
                 i = next_pos
@@ -567,7 +606,7 @@ function parser.parse(str)
             else
                 i = next_pos
             end
-            local t = result
+            local t = current_table
             for j = 1, #key - 1 do
                 local k = key[j]
                 if type(k) == "number" then k = tostring(k) end

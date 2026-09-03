@@ -9,6 +9,8 @@ end
 
 workspace.Workspace = {}
 workspace.Workspace.__index = workspace.Workspace
+workspace.WorkspaceManager = {}
+workspace.WorkspaceManager.__index = workspace.WorkspaceManager
 
 function workspace.Workspace:new(index, name, rect, monitor)
     local ws = setmetatable({}, workspace.Workspace)
@@ -172,7 +174,6 @@ function workspace.Workspace:arrange()
     end
 
     if #fullscreen_windows > 0 then
-        local fw = fullscreen_windows[#fullscreen_windows]
         for _, w in ipairs(fullscreen_windows) do
             if w then
                 w:update_geometry(self.x, self.y, self.width, self.height)
@@ -185,6 +186,13 @@ function workspace.Workspace:arrange()
         return
     end
 
+    local layout_cfg = setmetatable({
+        master_count = self.master_count,
+        master_ratio = self.master_ratio,
+        gap_size = wm.gap_size or config.gap_size or 0,
+        border_width = config.border_width or 0,
+    }, {__index = config})
+
     local layout = layout_mgr.get_layout(self.layout)
     if layout and layout.arrange then
         layout.arrange(tiled_windows, {
@@ -192,7 +200,7 @@ function workspace.Workspace:arrange()
             y = self.y,
             width = self.width,
             height = self.height,
-        }, config)
+        }, layout_cfg)
     end
 
     for _, w in ipairs(floating_windows) do
@@ -513,7 +521,7 @@ end
 
 function workspace.WorkspaceManager:scroll_workspaces(direction)
     local config = self.wm.config
-    local niri_cfg = config.niri
+    local ws_cfg = config.workspace_behavior or {}
 
     local new_ws
     if direction == "up" or direction == "right" then
@@ -523,13 +531,13 @@ function workspace.WorkspaceManager:scroll_workspaces(direction)
     end
 
     if new_ws > #self.workspaces then
-        if niri_cfg.wrap_workspaces then
+        if ws_cfg.wrap_workspaces then
             new_ws = 1
         else
             return
         end
     elseif new_ws < 1 then
-        if niri_cfg.wrap_workspaces then
+        if ws_cfg.wrap_workspaces then
             new_ws = #self.workspaces
         else
             return
@@ -537,9 +545,9 @@ function workspace.WorkspaceManager:scroll_workspaces(direction)
     end
 
     self.scroll_offset = 0
-    self.scroll_active = niri_cfg.scroll_animate
+    self.scroll_active = ws_cfg.scroll_animate
     self.scroll_time = 0
-    self.scroll_duration = niri_cfg.scroll_animation_time or 250
+    self.scroll_duration = ws_cfg.scroll_animation_time or 250
 
     self:switch_to(new_ws)
 end
