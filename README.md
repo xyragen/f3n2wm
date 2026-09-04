@@ -73,4 +73,4 @@ Edit `~/.config/f3n2wm/f3n2wm.toml` and press `Mod4+r` to reload.
 
 ## License
 
-MIT
+GNU General Public License, Version 3
