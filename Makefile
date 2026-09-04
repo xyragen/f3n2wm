@@ -5,7 +5,7 @@ MANDIR ?= $(PREFIX)/share/man
 LUAJIT ?= luajit
 CONFIG_DIR ?= $(HOME)/.config/f3n2wm
 
-.PHONY: all install uninstall clean config run test docs deps setup
+.PHONY: all install uninstall clean config run test docs deps setup check
 
 all: check-deps
 
@@ -15,12 +15,14 @@ check-deps:
 	@pkg-config --exists xinerama 2>/dev/null || { echo "Error: libxinerama not found. Please install libxinerama-dev."; exit 1; }
 
 install: all
-	@mkdir -p $(DESTDIR)$(BINDIR)
-	@cp init.lua $(DESTDIR)$(BINDIR)/f3n2wm
+	@mkdir -p $(DESTDIR)$(PREFIX)/share/f3n2wm
+	@cp init.lua $(DESTDIR)$(PREFIX)/share/f3n2wm/
+	@cp -r src $(DESTDIR)$(PREFIX)/share/f3n2wm/
+	@printf '#!/bin/sh\nexec $(LUAJIT) %s/share/f3n2wm/init.lua %s/share/f3n2wm\n' "$(PREFIX)" "$(PREFIX)" > $(DESTDIR)$(BINDIR)/f3n2wm
 	@chmod +x $(DESTDIR)$(BINDIR)/f3n2wm
 	@mkdir -p $(DESTDIR)$(MANDIR)/man1
 	@cp f3n2wm.1 $(DESTDIR)$(MANDIR)/man1/ 2>/dev/null || true
-	@echo "f3n2wm installed to $(DESTDIR)$(BINDIR)/f3n2wm"
+	@echo "f3n2wm installed to $(DESTDIR)$(PREFIX)/share/f3n2wm"
 
 uninstall:
 	@rm -f $(DESTDIR)$(BINDIR)/f3n2wm
@@ -29,25 +31,19 @@ uninstall:
 
 config:
 	@mkdir -p $(CONFIG_DIR)
-	@mkdir -p $(CONFIG_DIR)/layouts
 	@if [ ! -f $(CONFIG_DIR)/f3n2wm.toml ]; then \
-		cp f3n2wm.toml $(CONFIG_DIR)/f3n2wm.toml; \
+		cp src/config/example.toml $(CONFIG_DIR)/f3n2wm.toml; \
 		echo "Default config installed to $(CONFIG_DIR)/f3n2wm.toml"; \
 	else \
 		echo "Config already exists at $(CONFIG_DIR)/f3n2wm.toml"; \
 	fi
-	@for f in layouts/*.lua; do \
-		if [ ! -f "$(CONFIG_DIR)/$$f" ]; then \
-			cp "$$f" "$(CONFIG_DIR)/$$f"; \
-		fi; \
-	done
 
 run: all
 	@$(LUAJIT) init.lua $(CURDIR)
 
 test:
 	@echo "Checking Lua syntax..."
-	@for f in init.lua lib/*.lua layouts/*.lua; do \
+	@for f in init.lua src/wm/*.lua src/events/*.lua src/x11/*.lua src/config/*.lua src/input/*.lua src/ipc/*.lua src/layout/*.lua src/window/*.lua src/workspace/*.lua src/hooks/*.lua src/toml/*.lua src/debug/*.lua; do \
 		$(LUAJIT) -bl "$$f" > /dev/null 2>&1 && echo "OK: $$f" || echo "FAIL: $$f"; \
 	done
 
@@ -86,4 +82,4 @@ setup:
 	@bash scripts/setup.sh
 
 check:
-	@python scripts/check_syntax.py
+	@python scripts/checks/syntax.py
