@@ -1,0 +1,2 @@
+enabled = true
+socket_path = "/tmp/f3n2wm-ipc.sock"

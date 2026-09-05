@@ -1,0 +1,11 @@
+[layout]
+name = "tall"
+description = "Master window takes two-thirds width, rest stacked in the remaining third"
+
+[[layout.column]]
+size = 2
+count = 1
+
+[[layout.column]]
+size = 1
+count = "fill"

@@ -1,0 +1,11 @@
+[layout]
+name = "master-stack"
+description = "Master window on the left, remaining windows stacked on the right"
+
+[[layout.column]]
+size = 1
+count = 1
+
+[[layout.column]]
+size = 1
+count = "fill"

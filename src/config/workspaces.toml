@@ -1,0 +1,13 @@
+names = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+count = 10
+scroll_layouts = true
+scroll_fallback = false
+
+scroll_workspaces = true
+scroll_factor = 1
+scroll_animate = true
+scroll_animation_time = 250
+wrap_workspaces = false
+infinite_workspaces = true
+workspace_scroll_snap = true
+output_scroll = true

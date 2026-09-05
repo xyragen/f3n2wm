@@ -1,0 +1,8 @@
+rules = [
+    "Firefox:float=false:workspace=2",
+    "Gimp:float=true:workspace=3",
+    "Steam:float=false:workspace=4",
+    "Alacritty:float=false:workspace=1",
+    "Spotify:float=false:workspace=10",
+    "discord:float=false:workspace=10",
+]

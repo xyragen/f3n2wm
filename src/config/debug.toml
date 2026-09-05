@@ -1,0 +1,10 @@
+log_level = "info"
+log_file = "~/.cache/f3n2wm.log"
+log_to_stdout = true
+log_events = false
+log_x11 = false
+log_layouts = true
+log_commands = false
+log_ipc = false
+log_hooks = false
+log_performance = false

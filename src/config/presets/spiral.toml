@@ -1,0 +1,5 @@
+[layout]
+name = "spiral"
+description = "Fibonacci spiral — each window splits the remaining space by the golden ratio"
+algorithm = "spiral"
+ratio = 0.61803398875

@@ -1,0 +1,7 @@
+exec = [
+    "feh --bg-scale ~/wallpaper.jpg",
+    "xfce4-power-manager",
+    "nm-applet",
+    "pasystray",
+    "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1",
+]

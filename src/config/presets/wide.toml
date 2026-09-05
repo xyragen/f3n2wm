@@ -1,0 +1,12 @@
+[layout]
+name = "wide"
+description = "Master window takes two-thirds height, rest split horizontally in the remaining third"
+direction = "horizontal"
+
+[[layout.column]]
+size = 2
+count = 1
+
+[[layout.column]]
+size = 1
+count = "fill"

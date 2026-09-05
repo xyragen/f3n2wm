@@ -1,0 +1,26 @@
+modkey = "Mod4"
+border_width = 2
+border_focus = "#589cc9"
+border_unfocus = "#333333"
+gap_size = 8
+snap_pixel = 0
+
+focus_follows_mouse = true
+focus_follows_mouse_raise = false
+mouse_follows_focus = false
+new_window_belongs_to_master = false
+new_window_toplevel = true
+new_windows_on_top = true
+click_to_focus = false
+single_click_focus = true
+hide_decorations = true
+center_new_windows = false
+resize_hints = true
+swallow_floating = true
+swallow_focus = true
+smart_gaps = false
+gapless_monocle = true
+allow_manual_floating = true
+float_snap_width = 100
+float_snap_height = 100
+float_snap_border = 20

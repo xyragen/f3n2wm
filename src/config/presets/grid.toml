@@ -1,0 +1,11 @@
+[layout]
+name = "grid"
+description = "Windows arranged in a balanced grid (2 columns, rows split per column)"
+
+[[layout.column]]
+size = 1
+count = 2
+
+[[layout.column]]
+size = 1
+count = 2

@@ -1,0 +1,4 @@
+[layout]
+name = "monocle"
+description = "All windows fill the screen (tabbed/fullscreen style)"
+algorithm = "monocle"

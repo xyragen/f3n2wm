@@ -1,0 +1,10 @@
+titlebars = false
+borders = true
+gaps = true
+smart_borders = true
+roundness = 0
+
+[opacity]
+focused = 1.0
+unfocused = 0.95
+fullscreen = 1.0
